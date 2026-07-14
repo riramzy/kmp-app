@@ -1,0 +1,56 @@
+name: Build Unsigned iOS App
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Lets you trigger the build manually from the GitHub web UI
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # Optimizes build times by caching your Gradle dependencies
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Prevents "Permission Denied" errors when Xcode tries to trigger Gradle
+      - name: Ensure Gradlew is Executable
+        run: chmod +x ./gradlew
+
+      # Compiles the KMP common code and Xcode wrapper into an unsigned physical device binary
+      - name: Build Xcode Project
+        run: |
+          xcodebuild -project iosApp/iosApp.xcodeproj \
+                     -scheme iosApp \
+                     -sdk iphoneos \
+                     -configuration Release \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_IDENTITY="" \
+                     PROVISIONING_PROFILE_SPECIFIER="" \
+                     -derivedDataPath build
+
+      # Bundles the compiled .app directory into an .ipa (which is just a renamed ZIP containing a Payload folder)
+      - name: Package into Unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/iosApp.app Payload/
+          zip -r iosApp.ipa Payload
+
+      # Uploads the final .ipa to your GitHub Action run outputs
+      - name: Upload App to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: iosApp-unsigned
+          path: iosApp.ipa
+          retention-days: 7
