@@ -26,7 +26,7 @@ import org.jetbrains.compose.resources.painterResource
 @Composable
 fun HomeScreen() {
     Scaffold(
-        topBar = { TopAppBar(modifier = Modifier.padding(10.dp)) },
+        topBar = { TopAppBar(modifier = Modifier.padding(15.dp)) },
         modifier = Modifier
             .statusBarsPadding()
     ) {
