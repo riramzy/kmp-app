@@ -40,11 +40,26 @@ jobs:
                      PROVISIONING_PROFILE_SPECIFIER="" \
                      -derivedDataPath build
 
-      # Bundles the compiled .app directory into an .ipa (which is just a renamed ZIP containing a Payload folder)
+      # Bundles the compiled .app directory into an .ipa
       - name: Package into Unsigned IPA
         run: |
           mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/iosApp.app Payload/
+          
+          echo "Searching for compiled .app bundle..."
+          APP_PATH=$(find . -name "*.app" | grep -v "Frameworks" | head -n 1)
+          
+          if [ -z "$APP_PATH" ]; then
+            echo "App not found in workspace. Searching default Xcode DerivedData..."
+            APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "*.app" | grep -v "Frameworks" | head -n 1)
+          fi
+          
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: Could not find any compiled .app bundle anywhere!"
+            exit 1
+          fi
+          
+          echo "Found app bundle at: $APP_PATH"
+          cp -r "$APP_PATH" Payload/
           zip -r iosApp.ipa Payload
 
       # Uploads the final .ipa to your GitHub Action run outputs
